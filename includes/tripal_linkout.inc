@@ -19,7 +19,6 @@ function gene_linkout_json($gene) {
     $result = chado_query($sql, $args);
     $fields = $result->fetchAssoc();
 
-
     // Get mRNA from gene
     $sql = "SELECT f2.uniquename AS mrna_uniquename, f2.feature_id AS mrna_id
             FROM chado.feature f, chado.feature_relationship fr, chado.feature f2
@@ -52,7 +51,7 @@ function gene_linkout_json($gene) {
     $fields['pep_uniquename'] = $new_fields['pep_uniquename'];
     $fields['pep_name'] = $new_fields['pep_name'];
 
-    full_gene_linkout_json($fields['genus'], $fields['species'], $fields['pep_name'], $fields['pep_uniquename'], $fields['mrna_uniquename'], $gene, FALSE, $fields['organism_id']);
+    full_gene_linkout_json($fields['genus'], $fields['species'], $fields['species_split'], $fields['pep_name'], $fields['pep_uniquename'], $fields['mrna_uniquename'], $gene, FALSE, $fields['organism_id']);
 }
 
 function family_representative_linkout_json($genus, $species, $family_representative) {
@@ -89,7 +88,7 @@ function family_representative_linkout_json($genus, $species, $family_representa
     full_gene_linkout_json($genus, $species, $fields['pep_name'], $fields['pep_uniquename'], $family_representative, $fields['gene_uniquename'], TRUE, $fields['organism_id']);
 }
 
-function full_gene_linkout_json($genus, $species, $pep_name, $pep_uniquename, $transcript_name, $gene_name, $show_gcv=TRUE, $organism_id=NULL) {
+function full_gene_linkout_json($genus, $species, $species_split, $pep_name, $pep_uniquename, $transcript_name, $gene_name, $show_gcv=TRUE, $organism_id=NULL) {
     $link =  [];
     global $base_url;
 
@@ -105,10 +104,13 @@ function full_gene_linkout_json($genus, $species, $pep_name, $pep_uniquename, $t
     if(getenv("MAIN_TRIPAL_URL")){
         $gogepp_url = getenv("MAIN_TRIPAL_URL");
     } else {
-        $gogepp_url = 'https://'.$current_gogepp.'.genouest.org';
+        $gogepp_url = 'https://'.$current_gogepp.'.genouest.org'; // change for production?
     }
 
     $species = str_replace(' ', '-', $species);
+    // Split species var to get only the first part of the string (containing only the "species" name)
+    $species_exploded = explode("-", $species);
+    $species_split = $species_exploded[0];
 
     $sp_links = array();
     $sp_links['bombyx_mori'] = array('http://sgp.dna.affrc.go.jp/KAIKObase/keyword_search.php?keyword=%pep_uniquename%&field=all&chr_id=all&scaf_id=&data_set%5B%5D=gene&graph_view=on');
@@ -135,6 +137,7 @@ function full_gene_linkout_json($genus, $species, $pep_name, $pep_uniquename, $t
 
     $org_str = strtolower($genus).'_'.$species;
 
+    $pep_uniquename = str_replace('mRNA', 'prot', $pep_uniquename);
     $pep_uniquename_noPA = explode('-P', $pep_uniquename)[0];
 
     $no_links = array(
@@ -145,6 +148,7 @@ function full_gene_linkout_json($genus, $species, $pep_name, $pep_uniquename, $t
         '%genus%' => $genus,
         '%lower_genus%' => strtolower($genus),
         '%species%' => $species,
+        '%species_split%' => $species_split,
         '%pep_name%' => $pep_name,
         '%pep_uniquename%' => $pep_uniquename,
         '%pep_uniquename_noPA%' => $pep_uniquename_noPA,
@@ -152,22 +156,12 @@ function full_gene_linkout_json($genus, $species, $pep_name, $pep_uniquename, $t
         '%transcript_name%' => $transcript_name,
     );
 
-    if (array_key_exists($org_str, $sp_links)) {
-        foreach ($sp_links[$org_str] as $key => $linkstr) {
-            $link[] = array(
-                'href' => str_replace(array_keys($replacements), $replacements, $linkstr),
-                'text' => 'View page for: ' . $pep_uniquename,
-            );
-        }
-    }
-    else if (! in_array($org_str, $no_links)) {
-        if (isset($pep_uniquename)) {
-            $default_url = $gogepp_url . '/sp/%lower_genus%_%species%/feature/%genus%/%species%/polypeptide/%pep_uniquename%';
-            $link[] = array(
-                'href' => str_replace(array_keys($replacements), $replacements, $default_url),
-                'text' => 'View page for: ' . $pep_uniquename,
-            );
-        }
+    if (isset($pep_uniquename)) {
+        $default_url = $gogepp_url . '/sp/%lower_genus%_%species_split%/feature/%genus%/%species%/polypeptide/%pep_uniquename%';
+        $link[] = array(
+            'href' => str_replace(array_keys($replacements), $replacements, $default_url),
+            'text' => 'View page for: ' . $pep_uniquename,
+        );
     }
 
     if (!empty($gene_name) && $show_gcv) {
