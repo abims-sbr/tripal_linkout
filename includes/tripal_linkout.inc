@@ -137,7 +137,6 @@ function full_gene_linkout_json($genus, $species, $species_split, $pep_name, $pe
 
     $org_str = strtolower($genus).'_'.$species;
 
-    $pep_uniquename = str_replace('mRNA', 'prot', $pep_uniquename);
     $pep_uniquename_noPA = explode('-P', $pep_uniquename)[0];
 
     $no_links = array(
@@ -157,7 +156,7 @@ function full_gene_linkout_json($genus, $species, $species_split, $pep_name, $pe
     );
 
     if (isset($pep_uniquename)) {
-        $default_url = $gogepp_url . '/sp/%lower_genus%_%species_split%/feature/%genus%/%species%/polypeptide/%pep_uniquename%';
+        $default_url = $gogepp_url . '/sp/%lower_genus%_%species_split%/feature/%genus%/%species%/polypeptide/%pep_name%';
         $link[] = array(
             'href' => str_replace(array_keys($replacements), $replacements, $default_url),
             'text' => 'View page for: ' . $pep_uniquename,
@@ -170,7 +169,7 @@ function full_gene_linkout_json($genus, $species, $species_split, $pep_name, $pe
             $org = "/$organism_id";
         }
         if (substr($base_url, -6) === 'tripal')
-            $default_url = $base_url . '/../gcv/#/search/'.$current_gogepp.$org.'/%gene_name%';
+            $default_url = $base_url . '/../gcv#/search/'.$current_gogepp.$org.'/%gene_name%';
         else
             $default_url = $base_url . '/gcv/#/search/'.$current_gogepp.$org.'/%gene_name%';
 
